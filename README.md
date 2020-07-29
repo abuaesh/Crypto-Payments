@@ -56,6 +56,11 @@ Compress your source code as zip archive and send us a link where we can downloa
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 #My Notes:
 
+## Steps
+> npm install mysql
+> node index.js
+
+
 ## Understanding the Workflow:
 "You have 2 files. Your task is to write code that processes those files and detects all valid incoming deposits."
 
