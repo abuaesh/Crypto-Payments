@@ -52,3 +52,28 @@ The command `docker-compose up` **MUST**:
 ## Submitting your results
 
 Compress your source code as zip archive and send us a link where we can download it. Sharing via Dropbox or Google Drive has worked well in the past. Make sure the Dockerfile is on the top level.
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+#My Notes:
+
+## Understanding the Workflow:
+"You have 2 files. Your task is to write code that processes those files and detects all valid incoming deposits."
+
+### Understanding the Input files (transactions.json)
+They are the returned results(list of transactions in JSON format) from running bitcoind’s rpc call `listsinceblock`.
+#### listsinceblock ( "blockhash" target_confirmations include_watchonly include_removed )
+Get all transactions in blocks since block [blockhash], or all transactions if omitted. If “blockhash” is no longer a part of the main chain, transactions from the fork point onward are included. Additionally, if include_removed is set, transactions affecting the wallet which were removed are returned in the “removed” array.
+More: https://bitcoin-rpc.github.io/en/doc/0.17.99/rpc/wallet/listsinceblock/
+
+**What is a Watch Only Address? 
+A watch only address lets you watch a bitcoin wallet owned by someone else. They can move their bitcoins away at any time. You cannot spend their bitcoins.
+
+**What is BIP125?
+Transaction replaceability occurs when a full node allows one or more of the transactions in its memory pool (mempool) to be replaced with a different transaction that spends some or all of the same inputs.
+Many nodes today will not replace any transaction in their mempool with another transaction that spends the same inputs, making it difficult for spenders to adjust their previously-sent transactions to deal with unexpected confirmation delays or to perform other useful replacements. The opt-in full Replace-by-Fee (opt-in full-RBF) signaling policy allows spenders to add a signal to a transaction indicating that they want to be able to replace that transaction in the future.
+More: https://en.bitcoin.it/wiki/Transaction_replacement 
+
+**How to check if a bitcoin tx is valid?
+https://en.bitcoin.it/wiki/Protocol_rules#.22tx.22_messages 
+https://bitcoin.stackexchange.com/questions/22997/how-is-a-wallets-balance-computed/23034#23034 
+
