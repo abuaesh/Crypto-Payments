@@ -1,0 +1,34 @@
+{
+  "name": "krakenchallenge",
+  "version": "1.0.0",
+  "description": "A Node.js app that will filter out valid transactions from given JSON files containging a list of transactions returned from running bitcoind’s rpc call `listsinceblock`. The app is configured to allow working  with both SQL or mongoDB types.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abuaesh/KrakenChallenge.git"
+  },
+  "type": "module",
+  "keywords": [
+    "node",
+    "js",
+    "mongodb",
+    "sql",
+    "nosql",
+    "bitcoin",
+    "transaction",
+    "deposit"
+  ],
+  "author": "Noha Abuaesh",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/abuaesh/KrakenChallenge/issues"
+  },
+  "homepage": "https://github.com/abuaesh/KrakenChallenge#readme",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "babel-node": "0.0.1-security",
+    "milsymbol": "^2.0.0"
+  }
+}
