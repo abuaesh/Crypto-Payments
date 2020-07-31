@@ -2,6 +2,7 @@
 
 import MongoBackend from '../backend/mongo-backend.js';
 import SqlBackend from '../backend/sql-backend.js';
+import Dotenv from 'dotenv';
 //import Transactions1 from './transactions-1.json';
 //import Transactions2 from './transactions-2.json';
 
@@ -14,19 +15,19 @@ import SqlBackend from '../backend/sql-backend.js';
 
     if(!backendType) // mongoDB selected
     {
-        dbConfig = "mongodb+srv://kraken:Y4vcNb92G8QN88qW@cluster0.v2i3h.mongodb.net/krakenChallenge?retryWrites=true&w=majority";
+        dbConfig = process.env.MONGO_CONNECTION_STRING;
     }
-    /* Uncomment this block if your SQL backend is already configured, otherwise defaults will be used to create a new  sql DB
+    // Uncomment this block if your SQL backend is already configured, otherwise defaults will be used to create a new  sql DB
     else //sql selected
     {
         dbConfig = {
-            host: 'localhost',
-            user: 'abuaesh',
-            password: 'abc123',
-            database: 'btcdb'
+            host: process.env.SQL_HOST,
+            user: process.env.SQL_USER,
+            password: process.env.SQL_PASS,
+            database: process.env.SQL_DB
         };
     } //end backend type selection
-    */
+    
     
 
     let backend = (!backendType)? new MongoBackend(dbConfig): new SqlBackend(dbConfig);

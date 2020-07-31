@@ -1,11 +1,11 @@
 //import customers from './customers.json';
-
+import MongoDB from 'mongodb';
 
 export default class MongoBackend{
     constructor(uri){
         //Configure mongoDB variables
-        let MongoClient = require('mongodb').MongoClient;
-        this.client = new MongoClient(uri, { useNewUrlParser: true });
+        let MongoClient = MongoDB.MongoClient;
+        let client = new MongoClient(uri, { useNewUrlParser: true });
         //Connect to mongoDB cloud
         client.connect(err => {
             const collection = client.db("krakenChallenge").collection("customers");
