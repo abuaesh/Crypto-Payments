@@ -1,5 +1,7 @@
+"use strict";
+
 import MongoBackend from '../backend/mongo-backend.js';
-//import SqlBackend from '../backend/sql-backend.js';
+import SqlBackend from '../backend/sql-backend.js';
 //import Transactions1 from './transactions-1.json';
 //import Transactions2 from './transactions-2.json';
 
@@ -14,7 +16,7 @@ import MongoBackend from '../backend/mongo-backend.js';
     {
         dbConfig = "mongodb+srv://kraken:Y4vcNb92G8QN88qW@cluster0.v2i3h.mongodb.net/krakenChallenge?retryWrites=true&w=majority";
     }
-    /* Uncomment this block if you know SQL backend config, otherwise defaults will be used
+    /* Uncomment this block if your SQL backend is already configured, otherwise defaults will be used to create a new  sql DB
     else //sql selected
     {
         dbConfig = {
@@ -27,8 +29,6 @@ import MongoBackend from '../backend/mongo-backend.js';
     */
     
 
-    //let backend = (!backendType)? new MongoBackend(dbConfig): new SqlBackend(dbConfig);
-
-    let backend = new MongoBackend(dbConfig);
+    let backend = (!backendType)? new MongoBackend(dbConfig): new SqlBackend(dbConfig);
 
 })(); //end async

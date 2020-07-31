@@ -1,7 +1,5 @@
-//import customers from './customers.JSON';
+//import customers from './customers.json';
 
-//Import mongoDB library
-//var mongo = require('mongodb');
 
 export default class MongoBackend{
     constructor(uri){

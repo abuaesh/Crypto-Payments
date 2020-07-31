@@ -1,7 +1,5 @@
 //import customers from './customers.JSON';
 
-var mysql = require('mysql');
-
 export default class SqlBackend{
     //Set up SQL connection
     constructor(dbConfig){
@@ -10,7 +8,7 @@ export default class SqlBackend{
 
         if(dbExists) //Database already exists
         {
-            this.con = mysql.createConnection({
+            this.con = require('mysql').createConnection({
                 host: dbConfig.host,
                 user: dbConfig.user,
                 password: dbConfig.password,
@@ -19,7 +17,7 @@ export default class SqlBackend{
         }
         else //Create DB and tables 
         {
-            this.con = mysql.createConnection({
+            this.con = require('mysql').createConnection({
                 host: dbConfig.host,
                 user: dbConfig.user,
                 password: dbConfig.password
