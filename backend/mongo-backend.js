@@ -1,18 +1,22 @@
 // Reference: https://www.mongodb.com/blog/post/quick-start-nodejs-mongodb--how-to-get-connected-to-your-database
 //import customers from './customers.json';
-import MongoClient from 'mongodb';
+import client from 'mongodb';
 
 export default class MongoBackend{
     constructor(uri){
-        //Configure mongoDB variables
-        let client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-        //Connect to mongoDB cloud
-        await client.connect(err => {
-            const collection = client.db("krakenChallenge").collection("customers");
-            // perform actions on the collection object
-            console.log("Customers collection created!");
-            client.close();
-        }); //end client.connect
+        //Create mongoDB client
+        //this.client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+        try{
+            //Connect to mongoDB cluster
+            client.connect(uri, function(err,db){
+                if (err) throw err;
+                console.log('Database created!\n'+db);
+                db.close();
+            });// end client.connect
+        }catch (e) {
+            console.error(e);
+        } //end try
         
     } //end constructor
 

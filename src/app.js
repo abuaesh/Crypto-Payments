@@ -7,6 +7,13 @@ import Dotenv from 'dotenv';
 //import Transactions2 from './transactions-2.json';
 
 (async() => {
+    const result = Dotenv.config()
+    
+    if (result.error) {
+    throw result.error
+    }
+    
+    console.log(result.parsed)
 
     const backendType = 0; //0 for mongoDB(default),
                             // 1 for SQL. 
@@ -16,6 +23,7 @@ import Dotenv from 'dotenv';
     if(!backendType) // mongoDB selected
     {
         dbConfig = process.env.MONGO_CONNECTION_STRING;
+        console.log('uri:'+dbConfig);
     }
     // Uncomment this block if your SQL backend is already configured, otherwise defaults will be used to create a new  sql DB
     else //sql selected
