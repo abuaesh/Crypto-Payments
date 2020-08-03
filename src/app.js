@@ -1,39 +1,57 @@
 "use strict";
 
-import MongoBackend from '../backend/mongo-backend.js';
-import SqlBackend from '../backend/sql-backend.js';
+import mongodb from 'mongodb';
 import Dotenv from 'dotenv';
-//import Transactions1 from './transactions-1.json';
-//import Transactions2 from './transactions-2.json';
+import Transactions1 from '../transactions/transactions-1.json';
+import Transactions2 from '../transactions/transactions-2.json';
 
 (async() => {
     //import environment variables
     const result = Dotenv.config()
     if (result.error) throw result.error
 
-    var dbConfig = null;//holds the connection string to the db to be used
+    //Connect to MongoDB
+    const MongoClient = mongodb.MongoClient;
+    var uri = process.env.MONGO_CONNECTION_STRING;
+    const Client = new MongoClient(uri, { useUnifiedTopology: true }); // useUnifiedTopology removes a warning
 
-    //Select DB Type
-    const backendType = 0; //0 for mongoDB(default),
-                            // 1 for SQL. 
-
-    if(!backendType) // mongoDB selected
+    // Connect
+    Client
+    .connect()
+    .then(client =>
     {
-        dbConfig = process.env.MONGO_CONNECTION_STRING;
-        console.log('uri:'+dbConfig);
-    }
-    /* Uncomment this block if your SQL backend is already configured, otherwise defaults will be used to create a new  sql DB
-    else //sql selected
-    {
-        dbConfig = {
-            host: process.env.SQL_HOST,
-            user: process.env.SQL_USER,
-            password: process.env.SQL_PASS,
-            database: process.env.SQL_DB
-        };
-    } //end backend type selection
-    */    
+        //Read all the transactions from the 2 JSON files altogether and save into txs
+        let txs = Transactions1["transactions"].concat(Transactions2["transactions"]);
 
-    let backend = (!backendType)? new MongoBackend(dbConfig): new SqlBackend(dbConfig);
+        //Save only the deposit transactions to your database collection
+        // Foreach deposit transaction, verify it is a valid transaction and mark it as such in your database(you will need this mark later)
+        var counterD = 0, counterN = 0;
+        txs.forEach(tx => {
+            if(tx.category == 'receive') 
+            {
+                counterD++;
+            }
+            else counterN++;
+        })
+
+        console.log(counterD + ' Desposits.');
+        console.log(counterN + ' Non-desposits.');
+
+        /* //TODO: implement later- Check list of available Dbs for your target DB,
+            //if the DB you are looking for does not exist, create it.
+        client
+        .db()
+        .admin()
+        .listDatabases() // Returns a promise that will resolve to the list of databases
+        })
+    .then(dbs => {
+        console.log("Mongo databases:", dbs);
+        //TODO: Implement these functions:
+        databaseExists(dbs, process.env.MONGO_DB_NAME).then(exists => {
+            if(!exists) createDatabase(process.env.MONGO_DB_NAME);
+        });*/
+    })
+    .catch(err => console.log(err))
+    .finally(() => Client.close()); // Closing after getting the data
 
 })(); //end async
