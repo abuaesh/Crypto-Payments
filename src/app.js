@@ -5,14 +5,17 @@ import Dotenv from 'dotenv';
 import validate from 'bitcoin-address-validation';
 import Transactions1 from '../transactions/transactions-1.json';
 import Transactions2 from '../transactions/transactions-2.json';
+import Customers from '../customers.json';
 
 let IRA = 0, WC = 0, LC = 0;
 
-async function main() {
-    //Import environment variables
-    const result = Dotenv.config();
-    if (result.error) throw result.error;
+//Import environment variables
+const result = Dotenv.config();
+if (result.error) throw result.error;
 
+
+async function main() {
+    
     //==========================================================================================================
     /*  STAGE 1: 
         ========
@@ -48,20 +51,19 @@ async function main() {
         // 1. Consider only deposit transactions
         if(tx.category != 'receive') return; //Not a deposit transaction - move on to next one
         
-        // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates- find by tx_id
+        // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates, check for confirmation updates
         Client
             .db(process.env.MONGO_DB_NAME)
             .collection(process.env.TX_COLLECTION_NAME)
             .find({txid:tx.txid},(result)=>{
-                if(result) console.log(result);
+                if(result) console.log(result); //duplicate found.. check for different confirmation count and update db
             }); //end find Duplicate txs
 
 
         // 3. Determine deposit validity - adds validity-related property to the tx object
-        tx["validity"] = verify(tx);    /*  Contains 2 sub-properties:
-                                            tx["validity"].status; //true or false for valid or invalid deposit respectively
-                                            tx["validity"].violations; //if deposit was invalid, this property says why.
-                                        */
+        let vResult = verify(tx);  
+        tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
+        tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
 
         // 4. Push deposit transaction to deposits array
         deposits.push(tx);
@@ -76,39 +78,81 @@ async function main() {
         .collection(process.env.TX_COLLECTION_NAME)
         .insertMany(deposits, function(err, result){
             if(err) throw err;
-            Client.close();
+
+             //STAGE 1 COMPLETE    
+            //==========================================================================================================
+            /*  STAGE 2:
+                ========
+                Read deposits from the database that are good to credit to users
+            */
+
+            let output = {
+                names:[],
+                counts: [],
+                sums: [],
+                unknownCount: 0,
+                unknownSum: 0,
+                smallest: 0,
+                largest: 0
+            }
+           //Retrieve all customers list from DB
+            Client
+            .db(process.env.MONGO_DB_NAME)
+            .collection(process.env.CUSTOMER_COLLECTION_NAME)
+            .find().toArray(function(err, customers){
+                if(err) throw err;
+
+                console.log(customers);
+        
+                for(var i = 0; i < customers.length; i++)
+                {
+                    let customer = customers[i];
+                    let name = customer.name;
+                    let address = customer.address;
+
+                    //Fetch the db for all valid deposits with this address:
+                    let query = {address:address, validityStatus:true};
+
+                    Client
+                        .db(process.env.MONGO_DB_NAME)
+                        .collection(process.env.TX_COLLECTION_NAME)
+                        .find(query).toArray(function(err, result) {
+                            if (err) throw err;
+                            console.log(name + " has " + result.length + " valid deposits.");
+                            output.names[i] = name;
+                            output.counts[i] = result.length;
+                            output.sums[i] = 0; //Calculate sums of all returned 
+                        }); //end customer query
+
+                } // end for all customers loop
+
+                //STAGE 2 COMPLETE    
+                //==========================================================================================================
+                /*  OUTPUT:
+                    =======
+                    Print the following 8 lines on stdout:
+                    ```
+                    Deposited for Wesley Crusher: count=n sum=x.xxxxxxxx
+                    Deposited for Leonard McCoy: count=n sum=x.xxxxxxxx
+                    Deposited for Jonathan Archer: count=n sum=x.xxxxxxxx
+                    Deposited for Jadzia Dax: count=n sum=x.xxxxxxxx
+                    Deposited for Montgomery Scott: count=n sum=x.xxxxxxxx
+                    Deposited for James T. Kirk: count=n sum=x.xxxxxxxx
+                    Deposited for Spock: count=n sum=x.xxxxxxxx
+                    Deposited without reference: count=n sum=x.xxxxxxxx
+                    Smallest valid deposit: x.xxxxxxxx
+                    Largest valid deposit: x.xxxxxxxx
+                    ```
+                    The numbers in lines 1 - 7 **MUST** contain the count of valid deposits and their sum for the respective customer.
+                    The numbers in line 8 **MUST** be the count and the sum of the valid deposits to addresses that are not associated with a known customer.
+                */
+        
+                Client.close();
+            });//end find all customers
+
         });// end insertMany
 
     }); // end delete previous collection-- TODO: Remove when not testing
-
-    //STAGE 1 COMPLETE    
-    //==========================================================================================================
-    /*  STAGE 2:
-        ========
-        Read deposits from the database that are good to credit to users
-    */
-
-
-    //STAGE 2 COMPLETE    
-    //==========================================================================================================
-    /*  OUTPUT:
-        =======
-       Print the following 8 lines on stdout:
-        ```
-        Deposited for Wesley Crusher: count=n sum=x.xxxxxxxx
-        Deposited for Leonard McCoy: count=n sum=x.xxxxxxxx
-        Deposited for Jonathan Archer: count=n sum=x.xxxxxxxx
-        Deposited for Jadzia Dax: count=n sum=x.xxxxxxxx
-        Deposited for Montgomery Scott: count=n sum=x.xxxxxxxx
-        Deposited for James T. Kirk: count=n sum=x.xxxxxxxx
-        Deposited for Spock: count=n sum=x.xxxxxxxx
-        Deposited without reference: count=n sum=x.xxxxxxxx
-        Smallest valid deposit: x.xxxxxxxx
-        Largest valid deposit: x.xxxxxxxx
-        ```
-        The numbers in lines 1 - 7 **MUST** contain the count of valid deposits and their sum for the respective customer.
-        The numbers in line 8 **MUST** be the count and the sum of the valid deposits to addresses that are not associated with a known customer.
-     */
 
 } //end main
 
