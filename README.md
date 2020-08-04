@@ -57,8 +57,7 @@ Compress your source code as zip archive and send us a link where we can downloa
 #My Notes:
 
 ## Steps
-> npm install mysql
-> node index.js
+> node --no-warnings --experimental-json-modules app.js
 
 
 ## Understanding the Workflow:

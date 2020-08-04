@@ -29,7 +29,7 @@ async function main() {
     //Delete previous collection in the tables-- TODO: Remove when not testing
     Client
         .db(process.env.MONGO_DB_NAME)
-        .collection(process.env.MONGO_COLLECTION_NAME)
+        .collection(process.env.TX_COLLECTION_NAME)
         .drop((err, result)=>{
             if(err) throw err;
 
@@ -51,10 +51,10 @@ async function main() {
         // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates- find by tx_id
         Client
             .db(process.env.MONGO_DB_NAME)
-            .collection(process.env.MONGO_COLLECTION_NAME)
-            .findOne({"txid":tx.txid},(result)=>{
-                if(result) return; //duplicate detected - move on to next transaction
-            }); //end findOne
+            .collection(process.env.TX_COLLECTION_NAME)
+            .find({txid:tx.txid},(result)=>{
+                if(result) console.log(result);
+            }); //end find Duplicate txs
 
 
         // 3. Determine deposit validity - adds validity-related property to the tx object
@@ -73,7 +73,7 @@ async function main() {
     // Insert all extracted deposits into the database -- done outside the loop for efficiency
     Client
         .db(process.env.MONGO_DB_NAME)
-        .collection(process.env.MONGO_COLLECTION_NAME)
+        .collection(process.env.TX_COLLECTION_NAME)
         .insertMany(deposits, function(err, result){
             if(err) throw err;
             Client.close();
