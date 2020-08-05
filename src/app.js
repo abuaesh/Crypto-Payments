@@ -101,8 +101,6 @@ async function main() {
             .collection(process.env.CUSTOMER_COLLECTION_NAME)
             .find().toArray(function(err, customers){
                 if(err) throw err;
-
-                console.log(customers);
         
                 for(var i = 0; i < customers.length; i++)
                 {
@@ -116,12 +114,22 @@ async function main() {
                     Client
                         .db(process.env.MONGO_DB_NAME)
                         .collection(process.env.TX_COLLECTION_NAME)
-                        .find(query).toArray(function(err, result) {
+                        .find(query, {amount:1}).toArray(function(err, txPerCustomer) {
                             if (err) throw err;
-                            console.log(name + " has " + result.length + " valid deposits.");
                             output.names[i] = name;
-                            output.counts[i] = result.length;
-                            output.sums[i] = 0; //Calculate sums of all returned 
+                            output.counts[i] = txPerCustomer.length;
+                            output.sums[i] = 0; //Calculate sums of all returned valid tx's for this customer
+
+                            txPerCustomer.forEach(customerTx=>{
+                                output.sums[i] += customerTx.amount;
+
+                            });// end foreach amount
+
+                            console.log("Deposited for " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);                            
+
+                            if(i == customers.length-1)
+                            Client.close();
+
                         }); //end customer query
 
                 } // end for all customers loop
@@ -147,7 +155,6 @@ async function main() {
                     The numbers in line 8 **MUST** be the count and the sum of the valid deposits to addresses that are not associated with a known customer.
                 */
         
-                Client.close();
             });//end find all customers
 
         });// end insertMany
