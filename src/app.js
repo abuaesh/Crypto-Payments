@@ -1,6 +1,9 @@
+import Transactions1 from '../transactions/transactions-1.json';
+import Transactions2 from '../transactions/transactions-2.json';
+import Dotenv from 'dotenv';
 import pkg from 'mongodb';
 const { MongoClient } = pkg;
-import Dotenv from 'dotenv';
+
 
 //Import environment variables
 const env = Dotenv.config();
