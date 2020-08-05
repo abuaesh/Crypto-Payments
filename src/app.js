@@ -114,7 +114,7 @@ async function main() {
                     Client
                         .db(process.env.MONGO_DB_NAME)
                         .collection(process.env.TX_COLLECTION_NAME)
-                        .find(query, {amount:1}).toArray(function(err, txPerCustomer) {
+                        .find(query).project({'_id':false, 'amount':true}).toArray(function(err, txPerCustomer) {
                             if (err) throw err;
                             output.names[i] = name;
                             output.counts[i] = txPerCustomer.length;
@@ -123,7 +123,9 @@ async function main() {
                             txPerCustomer.forEach(customerTx=>{
                                 output.sums[i] += customerTx.amount;
 
-                            });// end foreach amount
+                            });// end foreach amount 
+
+                            console.log(txPerCustomer);
 
                             console.log("Deposited for " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);                            
 
