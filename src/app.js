@@ -57,16 +57,39 @@ async function main() {
             .collection(process.env.TX_COLLECTION_NAME)
             .find({txid:tx.txid},(result)=>{
                 if(result) console.log(result); //duplicate found.. check for different confirmation count and update db
+                // 3. Determine deposit validity - adds validity-related property to the tx object
+                let vResult = verify(tx);  
+                tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
+                tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
+
+                // 4. Determine if the receiving address is known to us-- as of now, it may become known to us later.
+                /*let query = [
+                    { $lookup:
+                       {
+                         from: process.env.CUSTOMER_COLLECTION_NAME,
+                         localField: 'address',
+                         foreignField: 'address',
+                         as: 'customerDetails'
+                       }
+                     }
+                    ];
+                Client
+                    .db(process.env.MONGO_DB_NAME)
+                    .collection(process.env.TX_COLLECTION_NAME)
+                    .aggregate(query).toArray(function(err,result){               
+
+                        if(result['customerDetails'].length > 0) //known customer
+                        {
+                            tx["knownAddress"] = true;
+                        }
+                        else tx["knownAddress"] = false;*/
+
+                        // 5. Push deposit transaction to deposits array
+                        deposits.push(tx);
+
+                    //}); // end mark known tx
+
             }); //end find Duplicate txs
-
-
-        // 3. Determine deposit validity - adds validity-related property to the tx object
-        let vResult = verify(tx);  
-        tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
-        tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
-
-        // 4. Push deposit transaction to deposits array
-        deposits.push(tx);
 
     }); //end foreach Tx
 
@@ -125,12 +148,10 @@ async function main() {
 
                             });// end foreach amount 
 
-                            console.log(txPerCustomer);
+                            if(i == customers.length) // this check is done too early before i reaches 7, and the connection is never closed :(
+                                    Client.close();
 
-                            console.log("Deposited for " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);                            
-
-                            if(i == customers.length-1)
-                            Client.close();
+                            console.log("Deposited for "+ i +" " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);
 
                         }); //end customer query
 
@@ -201,7 +222,7 @@ function verify(tx)
         LC++;
     }
 
-    // 2. Recepient is a valid bitcoin address - this check should be made sending the tx to minimize burning btc.
+    // 2. Recepient is a valid bitcoin address - this check should be made when sending the tx to minimize burning btc.
     if(validate(tx.address) == false) //{console.log('Invalid recepient address'); return false;}
     {
         validity.status = false;
@@ -213,10 +234,8 @@ function verify(tx)
 
     // 4. Blockhash satisfies nBits proof of work
     
-    // 5. Blocktimestamp is no more than 2 hours in the future
-
-    // 6. No wallet conflicts
-    if(!tx.walletconflicts.length == 0) //{console.log('Wallet conflicts'); return false;}
+    // 5. No wallet conflicts
+    if(!tx.walletconflicts.length == 0) 
     {
         validity.status = false;
         validity.violations += "\n-Wallet conflicts.";
