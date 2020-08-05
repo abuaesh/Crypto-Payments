@@ -27,8 +27,7 @@ async function main() {
         await client.connect();
 
         //Delete previous collection in the tables-- TODO: Remove when not testing
-        await deleteTxCollection();
-        console.log("DB CLear!");
+        //await deleteTxCollection();
 
         //Read all the transactions from the 2 JSON files altogether and save into txs array
         let txs = Transactions1["transactions"].concat(Transactions2["transactions"]);
@@ -50,41 +49,121 @@ async function deleteTxCollection()
         .drop();
 }
 
-async function addTxDocuments(txs){
-    let deposits = []; //Array to hold deposit transactions
+async function addTxDocuments(txs)
+{
+    let deposits = [];
+    try{
 
-    txs.forEach(tx => {
+        //for(var i =0; i < txs.length; i++) {
+            txs.forEach(tx => {
 
-        // 1. Consider only deposit transactions
-        if(tx.category != 'receive') return; //Not a deposit transaction - move on to next one
-        
-        // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates
-        // This function will do confirmation field updates
-        let duplicateFlag = checkForDuplicates(tx);
-        if(duplicateFlag) return; //This tx is a duplicate, checkForDuplicates function has taken care of db updates - move on to next one
+            // 1. Consider only deposit transactions
+            if(tx.category != 'receive') return; //Not a deposit transaction - move on to next one
+            
+            // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates
+            // This function will do confirmation field updates
+            checkForDuplicates(tx).then((res) =>
+            {
+                if(err) throw err;
 
-        // 3. Determine deposit validity - adds validity-related property to the tx object
-        let vResult = verify(tx);  
-        tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
-        tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
+                // 3. Determine deposit validity - adds validity-related property to the tx object
+                let vResult = verify(tx);  
+                tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
+                tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
 
-        // 5. Push deposit transaction to deposits array
-        deposits.push(tx);
+                console.log(tx);
+                // 5. Add tx to the DB
+                /*client
+                .db(process.env.MONGO_DB_NAME)
+                .collection(process.env.TX_COLLECTION_NAME)
+                .insertOne(tx);*/
 
-    }); //end foreach Tx
+                deposits.push(tx);
+            }); //end check for duplicates
+        }); //end foreach Tx
+    }catch(err){throw err;}
 }
 
 async function checkForDuplicates(tx)
 {
-    await client
-    .db(process.env.MONGO_DB_NAME)
-    .collection(process.env.TX_COLLECTION_NAME)
-    .find({txid:tx.txid},(err, result)=>{
-        if(err) throw err;
-        if(result) //duplicate found.. check for different confirmation count, update db and return true
+    try
+    {
+        let duplicate = await client
+        .db(process.env.MONGO_DB_NAME)
+        .collection(process.env.TX_COLLECTION_NAME)
+        .find({txid: tx.txid}).toArray();
+
+        console.log(duplicate);
+
+        if(duplicate.length == 0) //not a duplicated tx
         {
-            //if confirmations in tx are higher than the detected duplicate, update 
-            return true; //raise duplicate flag to avoid re-entry in the db
-        }
-    }); //end find Duplicate txs
+            return false; 
+        }else //duplicate found.. remove old tx from db and return true
+        {
+            console.log(tx.txid);
+            console.log(duplicate[0].txid);
+           
+            await client
+            .db(process.env.MONGO_DB_NAME)
+            .collection(process.env.TX_COLLECTION_NAME)
+            .deleteOne({txid: tx.txid}, function(err, res){
+                if(err) throw err;
+                return true; //raise duplicate flag to avoid re-entry in the db-can be used for more checks
+
+            });
+ 
+        } // end if-else
+    }catch(err) {throw err};
+    
+}
+
+function verify(tx)
+{
+    // Start with assuming true validity
+    let validity = {
+                        status: true,
+                        violations: ""
+                    };
+
+    //Perform validity checks:
+
+    // 0. Ensure tx is correct
+    /*  
+    It is given that the txs are returned by rpc calls to bitcoind,
+    but this is to ensure the files were not altered.
+    E.g. No fake txs were injected in them / No incorrect details of transactions
+    */
+        // 0.a Transaction exists on the bitcoin network (txid comparison)
+
+        // 0.b Transaction details are accurate (txhash comparison) - Checking tx hash ensures all its details are accurate
+
+    // 1. At least 6 confirmations.
+    if(tx.confirmations < 6) //{console.log('Less than 6 confirmations.'); return false;}
+    {
+        validity.status = false;
+        validity.violations += "\n-Less than 6 confirmations.";
+        LC++;
+    }
+
+    // 2. Recepient is a valid bitcoin address - this check should be made when sending the tx to minimize burning btc.
+    if(validate(tx.address) == false) //{console.log('Invalid recepient address'); return false;}
+    {
+        validity.status = false;
+        validity.violations += "\n-Invalid recepient address.";
+        IRA++;
+    }
+
+    // 3. Block timestamp no more than 2 hours in the future
+
+    // 4. Blockhash satisfies nBits proof of work
+    
+    // 5. No wallet conflicts
+    if(!tx.walletconflicts.length == 0) 
+    {
+        validity.status = false;
+        validity.violations += "\n-Wallet conflicts.";
+        WC++;
+    }
+
+    return validity;
 }
