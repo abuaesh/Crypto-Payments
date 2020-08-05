@@ -62,32 +62,8 @@ async function main() {
                 tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
                 tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
 
-                // 4. Determine if the receiving address is known to us-- as of now, it may become known to us later.
-                /*let query = [
-                    { $lookup:
-                       {
-                         from: process.env.CUSTOMER_COLLECTION_NAME,
-                         localField: 'address',
-                         foreignField: 'address',
-                         as: 'customerDetails'
-                       }
-                     }
-                    ];
-                Client
-                    .db(process.env.MONGO_DB_NAME)
-                    .collection(process.env.TX_COLLECTION_NAME)
-                    .aggregate(query).toArray(function(err,result){               
-
-                        if(result['customerDetails'].length > 0) //known customer
-                        {
-                            tx["knownAddress"] = true;
-                        }
-                        else tx["knownAddress"] = false;*/
-
-                        // 5. Push deposit transaction to deposits array
-                        deposits.push(tx);
-
-                    //}); // end mark known tx
+                // 5. Push deposit transaction to deposits array
+                deposits.push(tx);
 
             }); //end find Duplicate txs
 
@@ -148,12 +124,41 @@ async function main() {
 
                             });// end foreach amount 
 
-                            if(i == customers.length) // this check is done too early before i reaches 7, and the connection is never closed :(
-                                    Client.close();
+                            console.log("Deposited for " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);
 
-                            console.log("Deposited for "+ i +" " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);
+
+                            // 4. Determine if the address is known to us as of now--it may become known to us later.
+                            let query = [
+                                { $lookup:
+                                {
+                                    from: process.env.CUSTOMER_COLLECTION_NAME,
+                                    localField: 'address',
+                                    foreignField: 'address',
+                                    as: 'customerDetails'
+                                }
+                                }
+                                ];
+                            Client
+                                .db(process.env.MONGO_DB_NAME)
+                                .collection(process.env.TX_COLLECTION_NAME)
+                                .aggregate(query).toArray(function(err,result){               
+
+                                    /*if(result['customerDetails'].length > 0) //known customer
+                                    {
+                                        tx["knownAddress"] = true;
+                                    }
+                                    else tx["knownAddress"] = false;*/
+
+                                    console.log(result[2]);
+                                });// end aggregate call
+
+
+                            if(i == customers.length-1) // this check is done too early before i reaches 7, and the connection is never closed :(
+                                Client.close(); 
 
                         }); //end customer query
+
+                        
 
                 } // end for all customers loop
 
