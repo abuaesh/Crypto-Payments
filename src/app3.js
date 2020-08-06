@@ -13,6 +13,65 @@ let IRA = 0, WC = 0, LC = 0;
 const result = Dotenv.config();
 if (result.error) throw result.error;
 
+async function extractDeposits(txs){
+    try{
+            
+        //Connect to MongoDB
+        const MongoClient = Mongodb.MongoClient;
+        var uri = process.env.MONGO_CONNECTION_STRING;
+        const Client = new MongoClient(uri, { useUnifiedTopology: true }); // useUnifiedTopology removes a warning
+        await Client.connect();
+
+        //Delete previous collection in the tables-- TODO: Remove when not testing
+        /*Client
+            .db(process.env.MONGO_DB_NAME)
+            .collection(process.env.TX_COLLECTION_NAME)
+            .drop((err, result)=>{
+                if(err) throw err;*/
+        
+        let deposits = []; //Array to hold deposit transactions
+
+        /*  Foreach transaction,
+            Consider only deposits,
+            verify its validity and mark it as either valid or not(you will need this mark later),
+            store it in your deposits array.
+        */
+        txs.forEach(tx => {
+
+            // 1. Consider only deposit transactions
+            if(tx.category != 'receive') return; //Not a deposit transaction - move on to next one
+            
+            // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates, check for confirmation updates
+            Client
+                .db(process.env.MONGO_DB_NAME)
+                .collection(process.env.TX_COLLECTION_NAME)
+                .find({txid:tx.txid},(result)=>{
+                    if(result) console.log(result); //duplicate found.. check for different confirmation count and update db
+                    // 3. Determine deposit validity - adds validity-related property to the tx object
+                    let vResult = verify(tx);  
+                    tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
+                    tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
+
+                    // 4. Mark known/unkown recepient address
+                    markKnowntx(tx, (result) => {
+                        tx["known"] = result;
+                    
+
+                        // 5. Push deposit transaction to deposits array
+                        deposits.push(tx);
+
+                        // Insert all extracted deposits into the database -- done outside the loop for efficiency
+                        //addSingletx(tx);
+                    }); // end mark known 
+                }); //end find Duplicate txs
+
+        }); //end foreach Tx
+    }finally{
+        Client.close();
+        return deposits;
+    }
+}
+
 
 async function main() {
     
@@ -22,24 +81,14 @@ async function main() {
         Read all transactions from `transactions-1.json` and `transactions-2.json` 
         and store all deposits in a database of your choice.
     */
-
-    //Connect to MongoDB
-    const MongoClient = Mongodb.MongoClient;
-    var uri = process.env.MONGO_CONNECTION_STRING;
-    const Client = new MongoClient(uri, { useUnifiedTopology: true }); // useUnifiedTopology removes a warning
-    await Client.connect();
-
-    //Delete previous collection in the tables-- TODO: Remove when not testing
-    /*Client
-        .db(process.env.MONGO_DB_NAME)
-        .collection(process.env.TX_COLLECTION_NAME)
-        .drop((err, result)=>{
-            if(err) throw err;*/
-
     //Read all the transactions from the 2 JSON files altogether and save into txs
     let txs = Transactions1["transactions"].concat(Transactions2["transactions"]);
+
+    let deposits = await extractDeposits(txs);
     
-    let deposits = []; //Array to hold deposit transactions
+    console.log(deposits.length);
+
+    //SaveDeposits(deposits);
 
     let output = {
         names:[],
@@ -50,44 +99,6 @@ async function main() {
         smallest: 0,
         largest: 0
     };
-
-    /*  Foreach transaction,
-        Consider only deposits,
-        verify its validity and mark it as either valid or not(you will need this mark later),
-        store it in your deposits array.
-    */
-    txs.forEach(tx => {
-
-        // 1. Consider only deposit transactions
-        if(tx.category != 'receive') return; //Not a deposit transaction - move on to next one
-        
-        // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates, check for confirmation updates
-        Client
-            .db(process.env.MONGO_DB_NAME)
-            .collection(process.env.TX_COLLECTION_NAME)
-            .find({txid:tx.txid},(result)=>{
-                if(result) console.log(result); //duplicate found.. check for different confirmation count and update db
-                // 3. Determine deposit validity - adds validity-related property to the tx object
-                let vResult = verify(tx);  
-                tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
-                tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
-
-                // 4. Mark known/unkown recepient address
-                markKnowntx(tx, (result) => {
-                    tx["known"] = result;
-                
-
-                    // 5. Push deposit transaction to deposits array
-                    deposits.push(tx);
-
-                    // Insert all extracted deposits into the database -- done outside the loop for efficiency
-                    addSingletx(tx);
-                }); // end mark known 
-            }); //end find Duplicate txs
-
-    }); //end foreach Tx
-
-    console.log(deposits.length);
     
 
              //STAGE 1 COMPLETE    
