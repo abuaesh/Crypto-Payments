@@ -311,12 +311,52 @@ async function getMinMaxInfo(Client)
     return resultMinMax[0];
 }
 
+async function findKnownInfo(Client)
+{
+    //Find names, counts and sums of deposits to unknown addresses
+    let query = [
+        {
+            $match: { validityStatus: true, known: true }
+        },
+        {
+            $group : 
+            {
+                _id : "$address", 
+                count : {$sum : 1}, 
+                total : {$sum : "$amount"}
+            }
+        },
+        {
+            $lookup:
+            {
+                from: process.env.CUSTOMER_COLLECTION_NAME,
+                localField: '_id',
+                foreignField: 'address',
+                as: 'details'
+            }
+        },
+        {
+            $project: { "_id": 0, "details._id": 0, "details.address": 0 } 
+        }
+    ];
+
+    let knownResult = await Client
+        .db(process.env.MONGO_DB_NAME)
+        .collection(process.env.TX_COLLECTION_NAME)
+        .aggregate(query).toArray();
+
+    return knownResult;
+}
 async function getRequiredInfo()
 {
     let output = {
-        names:[],
-        counts: [],
-        sums: [],
+        knownInfo:[],   /*  Sample value: 
+                            [
+                                { count: 3, total: 11.89, details: [ {name: "bla bla"} ] },
+                                { count: 3, total: 89.72436723999999, details: [ {name: "kokoko"} ] },
+                                { count: 6, total: 22.61287, details: [ {name: "jijiji"} ] }
+                            ]
+                        */
         unknownCount: 0,
         unknownSum: 0,
         smallest: 0,
@@ -331,15 +371,17 @@ async function getRequiredInfo()
     try{
         /** Fill in the missing info:
          * let output = {
-         *    names:[], counts: [], sums: [],
+         *    knownInfo:[{count:xx, sum: x.xx, details:[{name:"lol"}]}],
          *    unknownCount: 0, unknownSum: 0,
          *    smallest: 0, largest: 0
          * };
         */
+       //Find sum and count of known customers
+       let knownResult = await findKnownInfo(Client);
+       output.knownInfo = knownResult;
 
         //Find sum and count of unreferenced deposits
         let unknownResult = await findUnknownInfo(Client);
-
         output.unknownCount = unknownResult.count;
         output.unknownSum = unknownResult.total;
 
@@ -360,14 +402,13 @@ async function getRequiredInfo()
 async function displayOutput()
 {
     let output = await getRequiredInfo();
-    console.log(output);
-/*
+
     //Display to stdout
-    for(var i = 0; i < output.names.length; i++)
+    for(var i = 0; i < output.knownInfo.length; i++)
     {
-        console.log("Deposited for " + output.names[i] +
-                    ": count= " + output.counts[i] +
-                    " sum=" + output.sums[i]);
+        console.log("Deposited for " + output.knownInfo[i].details[0].name +
+                    ": count= " + output.knownInfo[i].count +
+                    " sum=" + output.knownInfo[i].total);
     }
 
     console.log("Deposited without reference: count=" + output.unknownCount +
@@ -375,7 +416,7 @@ async function displayOutput()
 
     console.log("Smallest valid deposit: " + output.smallest);
     console.log("Largest valid deposit: " + output.largest);
-*/
+
 }
 
 async function main()
