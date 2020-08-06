@@ -7,6 +7,10 @@ import Transactions1 from '../transactions/transactions-1.json';
 import Transactions2 from '../transactions/transactions-2.json';
 import Customers from '../customers.json';
 
+//Import environment variables
+const result = Dotenv.config();
+if (result.error) throw result.error;
+
 async function readTxsFromJson()
 {
     //Read all the transactions from the 2 specified JSON files altogether and save into txs array
@@ -34,7 +38,7 @@ async function processDeposits(txs)
     // 1. Consider only deposit transactions
     let deposits = await getOnlyDeposits(txs);
 
-    console.log('recieved from onlydepo' + deposits.length);
+    console.log('recieved from onlydepo ' + deposits.length);
 
     // 2. Ensure this list does not contain duplicates within
     let uniqueDeposits = await removeDuplicates(deposits);
@@ -58,28 +62,43 @@ async function determineKnownTxs(txs)
 {
     let markedDeposits = [];
 
-    for(var i =0; i < txs.length; i++){
-        let tx = txs[i];
-
-        let kResult = await isKnownDeposit(tx); 
-
-        tx["known"]  = kResult; //false for unreferenced deposits
-
-        markedDeposits.push(tx);
+    //Query customers DB for tx.account
+    //Connect to MongoDB
+    const MongoClient = Mongodb.MongoClient;
+    var uri = process.env.MONGO_CONNECTION_STRING;
+    const Client = new MongoClient(uri, { useUnifiedTopology: true }); // useUnifiedTopology removes a warning
+    await Client.connect();
+    try{
+        
+        for(var i =0; i < txs.length; i++){
+            let tx = txs[i];
+    
+            let kResult = await isKnownDeposit(Client, tx); 
+    
+            tx["known"]  = kResult; //false for unreferenced deposits
+    
+            markedDeposits.push(tx);
+        }
+    }finally{
+        Client.close();    
+        return markedDeposits;    
     }
-    console.log('mark knowledge returning to mother ' + markedDeposits.length);
-
-    return markedDeposits;
 }
 
-async function isKnownDeposit(tx)
+async function isKnownDeposit(Client, tx)
 {
-    let know = false;
+    let known = true;
 
-    //Query customers DB for tx.account
+    let customer = await Client
+    .db(process.env.MONGO_DB_NAME)
+    .collection(process.env.CUSTOMER_COLLECTION_NAME)
+    .findOne({address:tx.address});
 
+    if(!customer) //This address is not registered in our customers
+        known = false;
 
-    return know;
+    return known;
+    
 }
 
 async function removeDuplicates(deposits)
@@ -120,13 +139,14 @@ async function isDuplicated(index, txs)
 async function verifyDeposits(txs)
 {
     let verifiedDeposits = [];
-    txs.forEach(tx => {
-        let vResult = verify(tx);  
-        tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
-        tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
-
+    for(var i = 0; i < txs.length; i++)
+    {
+        let tx = txs[i];
+        let vResult = await verify(tx);  
+        tx["validityStatus"]  = vResult.status;//true or false for valid or invalid deposit respectively
+        tx["validityViolations"] = vResult.violations; //if deposit was invalid, this property says why.
         verifiedDeposits.push(tx);
-    });
+    }
     return verifiedDeposits;
 }
 
@@ -154,14 +174,14 @@ async function verify(tx)
     if(tx.confirmations < 6) //{console.log('Less than 6 confirmations.'); return false;}
     {
         validity.status = false;
-        validity.violations += "\n-Less than 6 confirmations.";
+        validity.violations += "-Less than 6 confirmations.\n";
     }
 
     // 2. Recepient is a valid bitcoin address - this check should be made when sending the tx to minimize burning btc.
     if(validate(tx.address) == false) //{console.log('Invalid recepient address'); return false;}
     {
         validity.status = false;
-        validity.violations += "\n-Invalid recepient address.";
+        validity.violations += "-Invalid recepient address.\n";
     }
 
     // 3. Block timestamp no more than 2 hours in the future
@@ -172,12 +192,68 @@ async function verify(tx)
     if(!tx.walletconflicts.length == 0) 
     {
         validity.status = false;
-        validity.violations += "\n-Wallet conflicts.";
+        validity.violations += "-Wallet conflicts.\n";
     }
 
     return validity;
 }
 
+async function saveDepositstoDB(txs)
+{
+    //Query customers DB for tx.account
+    //Connect to MongoDB
+    const MongoClient = Mongodb.MongoClient;
+    var uri = process.env.MONGO_CONNECTION_STRING;
+    const Client = new MongoClient(uri, { useUnifiedTopology: true }); // useUnifiedTopology removes a warning
+    await Client.connect();
+    try{
+        for(var i = 0; i < txs.length; i++)
+        {
+            let tx = txs[i];
+            // Check if a duplicate tx is already saved in the db
+            let duplicated = await isDuplicatedInDB(Client, tx);
+
+            if(duplicated) 
+                await deleteDuplicatesFromDB(Client, tx.txid); //Delete older duplicate(the one in DB)
+            
+            //Add tx to DB
+            await insertTxIntoDB(Client, tx);
+        }
+    }finally{
+        Client.close();    
+    }
+}
+
+async function insertTxIntoDB(Client, tx)
+{
+    await Client
+    .db(process.env.MONGO_DB_NAME)
+    .collection(process.env.TX_COLLECTION_NAME)
+    .insertOne(tx);
+}
+
+async function deleteDuplicatesFromDB(Client, txid)
+{
+    await Client
+    .db(process.env.MONGO_DB_NAME)
+    .collection(process.env.TX_COLLECTION_NAME)
+    .deleteMany({txid:txid});
+}
+
+async function isDuplicatedInDB(Client, tx)
+{
+    let duplicate = true;
+
+    let dtx = await Client
+    .db(process.env.MONGO_DB_NAME)
+    .collection(process.env.TX_COLLECTION_NAME)
+    .findOne({txid:tx.txid});
+
+    if(!dtx) //This tx is not registered in our tx DB from before
+        duplicate = false;
+
+    return duplicate;
+}
 
 async function main()
 {
@@ -186,6 +262,7 @@ async function main()
 
         let deposits = await processDeposits(txs);
 
+        await saveDepositstoDB(deposits);
 
     }catch(e)
     {
