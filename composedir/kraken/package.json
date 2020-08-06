@@ -1,0 +1,55 @@
+{
+  "type": "module",
+  "name": "krakenchallenge",
+  "version": "1.0.0",
+  "description": "A Node.js app that will filter out valid transactions from given JSON files containging a list of transactions returned from running bitcoind’s rpc call `listsinceblock`. The app is configured to allow working  with both SQL or mongoDB types.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abuaesh/KrakenChallenge.git"
+  },
+  "keywords": [
+    "node",
+    "js",
+    "mongodb",
+    "sql",
+    "nosql",
+    "bitcoin",
+    "transaction",
+    "deposit"
+  ],
+  "author": "Noha Abuaesh <noha.abuaesh@gmail.com> www.linkedin.com/in/noha-abuaesh/",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/abuaesh/KrakenChallenge/issues"
+  },
+  "homepage": "https://github.com/abuaesh/KrakenChallenge#readme",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@babel/cli": "^7.10.5",
+    "@babel/core": "^7.11.0",
+    "@babel/plugin-proposal-class-properties": "^7.10.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.11.0",
+    "@babel/preset-env": "^7.11.0",
+    "babel-core": "^6.26.3",
+    "babel-loader": "^8.1.0",
+    "babel-node": "0.0.1-security",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-0": "^6.24.1",
+    "bitcoin-address-validation": "^1.0.2",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "milsymbol": "^2.0.0",
+    "requirejs": "^2.3.6",
+    "start-server-webpack-plugin": "^2.2.5",
+    "wallet-address-validator": "^0.2.4",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0",
+    "webpack-node-externals": "^2.5.0"
+  }
+}
