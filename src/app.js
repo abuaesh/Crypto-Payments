@@ -1,6 +1,7 @@
 import Transactions1 from '../transactions/transactions-1.json';
 import Transactions2 from '../transactions/transactions-2.json';
 import Dotenv from 'dotenv';
+import validate from 'bitcoin-address-validation';
 import pkg from 'mongodb';
 const { MongoClient } = pkg;
 
@@ -14,18 +15,10 @@ if (env.error) throw env.error;
  */
 const uri = process.env.MONGO_CONNECTION_STRING;
 
-/**
- * The Mongo Client 
- */
-const client = new MongoClient(uri);
-
 async function main() {
     
-
     try {
-        // Connect to the MongoDB cluster
-        await client.connect();
-
+        
         //Delete previous collection in the tables-- TODO: Remove when not testing
         //await deleteTxCollection();
 
@@ -34,8 +27,7 @@ async function main() {
         addTxDocuments(txs);
 
     } finally {
-        // Close the connection to the MongoDB cluster
-        await client.close();
+        
     }
 }
 
@@ -43,51 +35,85 @@ main().catch(console.error);
 
 async function deleteTxCollection()
 {
-    await client
-        .db(process.env.MONGO_DB_NAME)
-        .collection(process.env.TX_COLLECTION_NAME)
-        .drop();
+    try{
+        /**
+        * The Mongo Client 
+         */
+        const client = new MongoClient(uri);
+        // Connect to the MongoDB cluster
+        await client.connect();
+        await client
+            .db(process.env.MONGO_DB_NAME)
+            .collection(process.env.TX_COLLECTION_NAME)
+            .drop();
+    }finally {
+        // Close the connection to the MongoDB cluster
+        await client.close();
+    }
+         
 }
-
+//==============================================================================
 async function addTxDocuments(txs)
 {
-    let deposits = [];
     try{
+        /**
+        * The Mongo Client 
+         */
+        const client = new MongoClient(uri);
+        // Connect to the MongoDB cluster
+        await client.connect();
 
-        //for(var i =0; i < txs.length; i++) {
-            txs.forEach(tx => {
+        let deposits = []; //save all deposits here
+
+        //txs.forEach(tx => {
+        for(var i = 0; i< txs.length; i++){
+            let tx = txs[i];
 
             // 1. Consider only deposit transactions
             if(tx.category != 'receive') return; //Not a deposit transaction - move on to next one
             
             // 2. Ensure deposit has not been previously saved in DB to avoid storing duplicates
-            // This function will do confirmation field updates
-            checkForDuplicates(tx).then((res) =>
-            {
-                if(err) throw err;
+            // This function will remove the old occurence of the same tx 
+            let duplicate = checkForDuplicates(tx, function(err, res){
 
-                // 3. Determine deposit validity - adds validity-related property to the tx object
-                let vResult = verify(tx);  
-                tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
-                tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
+            // 3. Determine deposit validity - adds validity-related property to the tx object
+            let vResult = verify(tx);  
+            tx["validityStatus"]  = vResult["status"];//true or false for valid or invalid deposit respectively
+            tx["validityViolations"] = vResult["violations"]; //if deposit was invalid, this property says why.
 
-                console.log(tx);
-                // 5. Add tx to the DB
-                /*client
-                .db(process.env.MONGO_DB_NAME)
-                .collection(process.env.TX_COLLECTION_NAME)
-                .insertOne(tx);*/
+            console.log(tx);
+            // 5. Add tx to the DB
+            /*await client
+            .db(process.env.MONGO_DB_NAME)
+            .collection(process.env.TX_COLLECTION_NAME)
+            .insertOne(tx);
+            */
 
-                deposits.push(tx);
-            }); //end check for duplicates
-        }); //end foreach Tx
-    }catch(err){throw err;}
+            deposits.push(tx); });
+        
+        }; //end foreach Tx
+
+        await client
+        .db(process.env.MONGO_DB_NAME)
+        .collection(process.env.TX_COLLECTION_NAME)
+        .insertMany(deposits);
+
+    }finally {
+        // Close the connection to the MongoDB cluster
+        await client.close();
+    }
 }
-
+//==============================================================================
 async function checkForDuplicates(tx)
 {
-    try
-    {
+    try{
+        /**
+        * The Mongo Client 
+        */
+        const client = new MongoClient(uri);
+        // Connect to the MongoDB cluster
+        await client.connect();
+
         let duplicate = await client
         .db(process.env.MONGO_DB_NAME)
         .collection(process.env.TX_COLLECTION_NAME)
@@ -109,14 +135,16 @@ async function checkForDuplicates(tx)
             .deleteOne({txid: tx.txid}, function(err, res){
                 if(err) throw err;
                 return true; //raise duplicate flag to avoid re-entry in the db-can be used for more checks
-
             });
  
         } // end if-else
-    }catch(err) {throw err};
+    }finally {
+        // Close the connection to the MongoDB cluster
+        await client.close();
+    }
     
 }
-
+//==============================================================================
 function verify(tx)
 {
     // Start with assuming true validity

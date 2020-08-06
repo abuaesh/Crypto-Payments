@@ -69,8 +69,6 @@ async function main() {
 
     }); //end foreach Tx
 
-    console.log(LC + " LCs. " + IRA + " IRAs. " + WC + " WCs.")
-
     // Insert all extracted deposits into the database -- done outside the loop for efficiency
     Client
         .db(process.env.MONGO_DB_NAME)
@@ -96,9 +94,7 @@ async function main() {
             }
            
 
-                    //Fetch the db for all valid deposits with this address:
-                    //let query = {address:address, validityStatus:true};
-                    let query = [
+                    /*let query = [
                         { 
                             $match: { 
                                 validityStatus: true 
@@ -126,27 +122,39 @@ async function main() {
                         .aggregate(query, function(err, result){
                             if(err) throw err;
                             console.log(result);
-                        });
+                        });*/
 
-                    /*Client
+                        Client
                         .db(process.env.MONGO_DB_NAME)
-                        .collection(process.env.TX_COLLECTION_NAME)
-                        .find(query).project({'_id':false, 'amount':true}).toArray(function(err, txPerCustomer) {
-                            if (err) throw err;
-                            output.names[i] = name;
-                            output.counts[i] = txPerCustomer.length;
-                            output.sums[i] = 0; //Calculate sums of all returned valid tx's for this customer
+                        .collection(process.env.CUSTOMER_COLLECTION_NAME)
+                        .find().toArray(function(err, customers){
+                            for(var i =0; i < customers.length; i++){
+                                output.names[i] = customers[i].name;
+                                //Fetch the db for all valid deposits with this address:
+                                let query = {address:customers[i].address, validityStatus:true};
+                                Client
+                                    .db(process.env.MONGO_DB_NAME)
+                                    .collection(process.env.TX_COLLECTION_NAME)
+                                    .find(query).project({'_id':false, 'amount':true}).toArray(function(err, txPerCustomer) {
+                                        if (err) throw err;
+                                        output.counts[i] = txPerCustomer.length;
+                                        output.sums[i] = 0; //Calculate sums of all returned valid tx's for this customer
 
-                            txPerCustomer.forEach(customerTx=>{
-                                output.sums[i] += customerTx.amount;
+                                        txPerCustomer.forEach(customerTx=>{
+                                            output.sums[i] += customerTx.amount;
 
-                            });// end foreach amount 
+                                        });// end foreach amount 
 
-                            console.log("Deposited for " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);
+                                        console.log("Deposited for " + output.names[i] + ": count=" + output.counts[i] + " sum=" + output.sums[i]);
+
+                                        findUnreferencedData();
+                                    }); // end find amounts 
+                                } // end for loop on customers
+                            });//end find all customers
 
 
                             // 4. Determine if the address is known to us as of now--it may become known to us later.
-                            let query = [
+                            /*let query = [
                                 { $lookup:
                                 {
                                     from: process.env.CUSTOMER_COLLECTION_NAME,
@@ -194,7 +202,6 @@ async function main() {
                     The numbers in lines 1 - 7 **MUST** contain the count of valid deposits and their sum for the respective customer.
                     The numbers in line 8 **MUST** be the count and the sum of the valid deposits to addresses that are not associated with a known customer.
                 */
-        
             
         });// end insertMany
 
