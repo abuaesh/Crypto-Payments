@@ -255,14 +255,139 @@ async function isDuplicatedInDB(Client, tx)
     return duplicate;
 }
 
+async function findUnknownInfo(Client)
+{
+    //Find count and sum of deposits to unknown addresses
+    let query = [
+        { 
+            $match: { validityStatus: true, known: false } 
+        },
+        {
+            $group: {
+                _id: null, 
+                count: {
+                    $sum: 1
+                },
+                total: {
+                    $sum: "$amount"
+                }
+            }
+        }
+        ];
+
+    let unknownResult = await Client
+        .db(process.env.MONGO_DB_NAME)
+        .collection(process.env.TX_COLLECTION_NAME)
+        .aggregate(query).toArray();
+
+    return unknownResult[0];
+
+}
+
+async function getMinMaxInfo(Client)
+{
+    let query = [
+        { 
+            $match: { validityStatus: true } 
+        },
+        {
+            $group: {
+                _id: null, 
+                smallest: {
+                $min: "$amount"
+                },
+                largest: {
+                $max: "$amount"
+                }
+            }
+            }
+        ];
+
+    let resultMinMax = await Client
+        .db(process.env.MONGO_DB_NAME)
+        .collection(process.env.TX_COLLECTION_NAME)
+        .aggregate(query).toArray();
+
+    return resultMinMax[0];
+}
+
+async function getRequiredInfo()
+{
+    let output = {
+        names:[],
+        counts: [],
+        sums: [],
+        unknownCount: 0,
+        unknownSum: 0,
+        smallest: 0,
+        largest: 0
+    };
+    //Query customers DB for requiredInfo
+    //Connect to MongoDB
+    const MongoClient = Mongodb.MongoClient;
+    var uri = process.env.MONGO_CONNECTION_STRING;
+    const Client = new MongoClient(uri, { useUnifiedTopology: true }); // useUnifiedTopology removes a warning
+    await Client.connect();
+    try{
+        /** Fill in the missing info:
+         * let output = {
+         *    names:[], counts: [], sums: [],
+         *    unknownCount: 0, unknownSum: 0,
+         *    smallest: 0, largest: 0
+         * };
+        */
+
+        //Find sum and count of unreferenced deposits
+        let unknownResult = await findUnknownInfo(Client);
+
+        output.unknownCount = unknownResult.count;
+        output.unknownSum = unknownResult.total;
+
+        
+        //Find min and max tx amounts
+        let resultMinMax = await getMinMaxInfo(Client);
+        output.smallest = resultMinMax.smallest;
+        output.largest = resultMinMax.largest;
+    
+    } finally{
+        Client.close();
+        return output;
+    }
+
+
+}
+
+async function displayOutput()
+{
+    let output = await getRequiredInfo();
+    console.log(output);
+/*
+    //Display to stdout
+    for(var i = 0; i < output.names.length; i++)
+    {
+        console.log("Deposited for " + output.names[i] +
+                    ": count= " + output.counts[i] +
+                    " sum=" + output.sums[i]);
+    }
+
+    console.log("Deposited without reference: count=" + output.unknownCount +
+                " sum=" + output.unknownSum);
+
+    console.log("Smallest valid deposit: " + output.smallest);
+    console.log("Largest valid deposit: " + output.largest);
+*/
+}
+
 async function main()
 {
     try{
-        let txs = await readTxsFromJson();
+        //let txs = await readTxsFromJson();
 
-        let deposits = await processDeposits(txs);
+        //let deposits = await processDeposits(txs);
 
-        await saveDepositstoDB(deposits);
+        //await saveDepositstoDB(deposits);
+
+        await displayOutput();
 
     }catch(e)
     {
