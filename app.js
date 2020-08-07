@@ -1,10 +1,7 @@
-"use strict";
-
 import Mongodb from 'mongodb';
 import Dotenv from 'dotenv';
 import validate from 'bitcoin-address-validation';
-import Transactions1 from './transactions/transactions-1.json';
-import Transactions2 from './transactions/transactions-2.json';
+import fs from 'fs';
 
 //Import environment variables
 const result = Dotenv.config();
@@ -13,7 +10,8 @@ if (result.error) throw result.error;
 async function readTxsFromJson()
 {
     //Read all the transactions from the 2 specified JSON files altogether and save into txs array
-    let txs = Transactions1["transactions"].concat(Transactions2["transactions"]);
+    let txs =  JSON.parse(fs.readFileSync('./transactions/transactions-1.json', "utf8")).transactions
+        .concat(JSON.parse(fs.readFileSync('./transactions/transactions-2.json', "utf8")).transactions)
     return txs;
 }
 
