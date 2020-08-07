@@ -2,7 +2,7 @@
   "type": "module",
   "name": "krakenchallenge",
   "version": "1.0.0",
-  "description": "A Node.js app that will filter out valid transactions from given JSON files containging a list of transactions returned from running bitcoind’s rpc call `listsinceblock`. The app is configured to allow working  with both SQL or mongoDB types.",
+  "description": "A Node.js app that will filter out valid transactions from given JSON files containging a list of transactions returned from running bitcoind’s rpc call `listsinceblock`. The app uses MongoDB clusters to store data.",
   "main": "index.js",
   "repository": {
     "type": "git",
@@ -12,7 +12,6 @@
     "node",
     "js",
     "mongodb",
-    "sql",
     "nosql",
     "bitcoin",
     "transaction",
@@ -25,16 +24,23 @@
   },
   "homepage": "https://github.com/abuaesh/KrakenChallenge#readme",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": ""
   },
   "dependencies": {
+    "@babel/cli": "^7.0.0-beta.46",
+    "@babel/core": "^7.10.4",
+    "@babel/plugin-proposal-class-properties": "^7.0.0-beta.46",
+    "@babel/plugin-proposal-object-rest-spread": "^7.0.0-beta.46",
+    "@babel/preset-env": "^7.10.4",
+    "babel-core": "^6.26.3",
+    "babel-loader": "^8.1.0",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-stage-0": "^6.24.1",
     "bitcoin-address-validation": "^1.0.2",
     "dotenv": "^8.2.0",
     "fs": "0.0.1-security",
     "mongodb": "^3.6.0",
     "wallet-address-validator": "^0.2.4"
-  },
-  "devDependencies": {
-    "nodemon": "^1.18.10"
   }
 }

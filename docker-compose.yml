@@ -10,11 +10,9 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - .:/home/node/app
-      - node_modules:/home/node/app/node_modules
+      - node_modules:/node_modules
     command: node app.js 
 
   
 volumes:
-    db:
     node_modules:

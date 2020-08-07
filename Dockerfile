@@ -1,13 +1,7 @@
-FROM node:12.16.1
-WORKDIR /usr/app
-COPY package*.json ./
-COPY . .
-
-RUN npm install gulp webpack webpack-cli -gulp
+FROM node:14.7.0 as build
+WORKDIR /app
+COPY . /app
 RUN npm install
-RUN gulp build-all
-
-
-EXPOSE 6095
-
-CMD [ "node", "app.js" ]
+COPY . .
+EXPOSE 80
+CMD ["node", "app.js"]
