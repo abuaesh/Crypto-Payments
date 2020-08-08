@@ -1,4 +1,4 @@
-# Kraken Crypto/Payments Hiring Test
+# Kraken Crypto/Payments Challenge
 
 At Kraken, we receive thousands of deposits from customers per day. This test is designed to test your ability to work with a transaction set that could get returned by a blockchain daemon like bitcoind.
 
