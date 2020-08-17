@@ -1,10 +1,10 @@
-# Kraken Crypto/Payments Challenge
+# Crypto/Payments Credit Updating App
 
-At Kraken, we receive thousands of deposits from customers per day. This test is designed to test your ability to work with a transaction set that could get returned by a blockchain daemon like bitcoind.
+Part of maintaining users credit amounts in their e-wallet, it is required to filter deposits that were made to their account on the bitcoin network. Thousands of deposits are made customers everyday. In this app, a transaction set returned by a blockchain daemon, like bitcoind, is filtered for deposits made for registered customers.
 
-The data we work with in this scenario comes from bitcoind’s rpc call `listsinceblock`. A frequently used approach to detect incoming deposits is to periodically call `listsinceblock` and process the returned data. This test contains 2 json files that represent the data from 2 separate calls to this endpoint. Your task is to write code that processes those files and detects all valid incoming deposits.
+The data we work with in this scenario comes from bitcoind’s rpc call `listsinceblock`. A frequently used approach to detect incoming deposits is to periodically call `listsinceblock` and process the returned data. These calls to the endpoint(a bitcoin node) have been previously made and the data is saved in 2 json files that represent the data from 2 separate calls to this endpoint.  The app in this repo processes those files and detects all valid incoming deposits.
 
-These instructions do not specify every single detail you should take into consideration. This is done on purpose to test your ability to analyze a problem and come up with a reasonable and safe approach. Keep in mind that your code will determine how much money each customer will get. Thoroughness is one of the most important qualities for this role.
+The results returned by this app will determine how much money each customer will get. A verification process is hence made per each transaction to ensure it is not a duplicate, confirmed at least 6 times on the blockchain, does not conflict with previous transactions for this wallet.
 
 **Goal**: Process transactions and filter them for valid deposits.
 

@@ -17,16 +17,8 @@ async function readTxsFromJson()
 
 async function getOnlyDeposits(txs)
 {
-    let deposits = [];
-    txs.forEach(tx => {
-        if(tx.category != 'receive')
-        {
-            return; //Not a deposit transaction - move on to next one
-        }
-        else{
-            deposits.push(tx);
-        }
-    });
+    let deposits = txs.filter(tx => tx.category == 'receive');
+    console.log("Deposits: " + deposits.length);
     return deposits;
 }
 
@@ -59,7 +51,7 @@ async function determineKnownTxs(txs)
     await Client.connect();
     try{
         
-        for(var i =0; i < txs.length; i++){
+        /*for(var i =0; i < txs.length; i++){
             let tx = txs[i];
     
             let kResult = await isKnownDeposit(Client, tx); 
@@ -67,16 +59,19 @@ async function determineKnownTxs(txs)
             tx["known"]  = kResult; //false for unreferenced deposits
     
             markedDeposits.push(tx);
-        }
+        }*/
+
+        markedDeposits = await Promise.all(txs.map(async tx => markKnownDeposit(Client, tx)));
     }finally{
-        Client.close();    
+        Client.close();  
+        console.log("Marked deposits: " + markedDeposits.length)  
         return markedDeposits;    
     }
 }
 
-async function isKnownDeposit(Client, tx)
+async function markKnownDeposit(Client, tx)
 {
-    let known = true;
+    tx["known"] = true;
 
     let customer = await Client
     .db(process.env.MONGO_DB_NAME)
@@ -84,9 +79,9 @@ async function isKnownDeposit(Client, tx)
     .findOne({address:tx.address});
 
     if(!customer) //This address is not registered in our customers
-        known = false;
+        tx["known"]  = false; //false for unreferenced deposits
 
-    return known;
+    return tx;
     
 }
 
@@ -106,36 +101,29 @@ async function removeDuplicates(deposits)
 
     uniqueDeposits.push(deposits[deposits.length-1]); //Insert last tx manually
     
+
+    console.log("Unique Deposits: " + uniqueDeposits.length);
+    
     return uniqueDeposits;
 }
 
 //Returns true if the tx at the given index is duplicated in the rest of deposits array.
 async function isDuplicated(index, txs)
 {
-    let d = txs[index];
 
     for(var i = index+1; i < txs.length; i++){
         //Check for similar txid 
-            if(txs[i].txid == d.txid)
+            if(txs[i].txid == txs[index].id)
             {
                 return true;
             }
-
     }
     return false;
 }
 
 async function verifyDeposits(txs)
 {
-    let verifiedDeposits = [];
-    for(var i = 0; i < txs.length; i++)
-    {
-        let tx = txs[i];
-        let vResult = await verify(tx);  
-        tx["validityStatus"]  = vResult.status;//true or false for valid or invalid deposit respectively
-        tx["validityViolations"] = vResult.violations; //if deposit was invalid, this property says why.
-        verifiedDeposits.push(tx);
-    }
+    let verifiedDeposits = txs.map(tx => verify(tx));
     return verifiedDeposits;
 }
 
@@ -156,8 +144,10 @@ async function verify(tx)
     E.g. No fake txs were injected in them / No incorrect details of transactions
     */
         // 0.a Transaction exists on the bitcoin network (txid comparison)
+            //RPC call
 
         // 0.b Transaction details are accurate (txhash comparison) - Checking tx hash ensures all its details are accurate
+
 
     // 1. At least 6 confirmations.
     if(tx.confirmations < 6) //{console.log('Less than 6 confirmations.'); return false;}
@@ -184,7 +174,10 @@ async function verify(tx)
         validity.violations.push("-Wallet conflicts.");
     }
 
-    return validity;
+    tx["validityStatus"]  = validity.status;//true or false for valid or invalid deposit respectively
+    tx["validityViolations"] = validity.violations; //if deposit was invalid, this property says why.
+
+    return tx;
 }
 
 async function saveDepositstoDB(txs)
@@ -415,9 +408,9 @@ async function main()
 
         let deposits = await processDeposits(txs);
 
-        await saveDepositstoDB(deposits);
+        /*await saveDepositstoDB(deposits);
 
-        await displayOutput();
+        await displayOutput();*/
 
     }catch(e)
     {
@@ -426,4 +419,5 @@ async function main()
 
 }
 
-await main().catch(console.error);
+//await main().catch(console.error);
+main();
