@@ -48,12 +48,20 @@ The command `docker-compose up` does the following:
     The numbers in line 8 are be the count and the sum of the valid deposits to addresses that are not associated with a known customer.
 
 ## How to run it?
-You can run the image by downloading the repo, then: `docker-compose up`
+First, you need to include a .env file pointing to your DB variables:
 
-Or, alternatively, follow these steps in a terminal:
+    MONGO_CONNECTION_STRING=***
+    MONGO_PASSWORD=***
+    MONGO_DB_NAME=***
+    TX_COLLECTION_NAME=***
+    CUSTOMER_COLLECTION_NAME=***
+Then, you can run the image by following these steps in a terminal:
 `npm init`
 `npm install`
 `node app.js`
+Or, alternatively, you can run the docker container by: `docker-compose up`
+
+
 
 ## Explanation and Resources
 
