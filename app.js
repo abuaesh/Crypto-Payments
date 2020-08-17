@@ -408,9 +408,9 @@ async function main()
 
         let deposits = await processDeposits(txs);
 
-        /*await saveDepositstoDB(deposits);
+        await saveDepositstoDB(deposits);
 
-        await displayOutput();*/
+        await displayOutput();
 
     }catch(e)
     {
