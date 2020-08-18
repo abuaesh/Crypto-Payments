@@ -1,7 +1,7 @@
 # Crypto/Payments Credit Updating App
 
 ## Description
-This is a dockerized Node.js application to process bitcoin transaction sets and save the data to a Mongo Database(A Mongo cluster is used here, but it can be changed according to the associated .env file). 
+This is a dockerized Node.js application to process bitcoin transaction sets and save the data to a Mongo Database(I used Mongo atlas here, but it can be changed according to the associated .env file). 
 
 ## Background
 Part of maintaining users credit amounts in their e-wallet, it is required to filter deposits that were made to their account on the bitcoin network. Thousands of deposits are made customers everyday. In this app, a transaction set returned by a blockchain daemon, like bitcoind, is filtered for deposits made for registered customers.
